@@ -1,9 +1,11 @@
 class AvroTurf::SchemaStore
 
-  def initialize(path: nil)
+  def initialize(path: nil, logger: nil)
     @path = path or raise "Please specify a schema path"
     @schemas = Hash.new
     @mutex = Mutex.new
+    @logger = logger || Logger.new($stderr)
+    @logger.level = Logger::DEBUG
   end
 
   # Resolves and returns a schema.
@@ -47,7 +49,10 @@ class AvroTurf::SchemaStore
   # Loads single schema
   # Such method is not thread-safe, do not call it of from mutex synchronization routine
   def load_schema!(fullname, local_schemas_cache = {})
+    @logger.info "Gloria: current dir `#{Dir.pwd}'"
+
     schema_path = build_schema_path(fullname)
+    @logger.info "Gloria: avro schema_path `#{schema_path}' fullname `#{fullname}'"
     schema_json = JSON.parse(File.read(schema_path))
 
     schema = Avro::Schema.real_parse(schema_json, local_schemas_cache)
@@ -92,8 +97,10 @@ class AvroTurf::SchemaStore
     else
       raise
     end
-  rescue Errno::ENOENT, Errno::ENAMETOOLONG
+  rescue Errno::ENOENT
     raise AvroTurf::SchemaNotFoundError, "could not find Avro schema at `#{schema_path}'"
+  rescue Errno::ENAMETOOLONG
+    raise AvroTurf::SchemaNotFoundError, "could not find Avro schema at `#{schema_path}', Errno::ENAMETOOLONG"
   end
 
   def build_schema_path(fullname)

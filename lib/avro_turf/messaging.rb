@@ -74,8 +74,9 @@ class AvroTurf
       client_key_data: nil
     )
       @logger = logger || Logger.new($stderr)
+      @logger.level = Logger::DEBUG
       @namespace = namespace
-      @schema_store = schema_store || SchemaStore.new(path: schemas_path || DEFAULT_SCHEMAS_PATH)
+      @schema_store = schema_store || SchemaStore.new(path: schemas_path || DEFAULT_SCHEMAS_PATH, logger: @logger)
       @registry = registry || CachedConfluentSchemaRegistry.new(
         ConfluentSchemaRegistry.new(
           registry_url,
@@ -114,6 +115,7 @@ class AvroTurf
     #
     # Returns the encoded data as a String.
     def encode(message, schema_name: nil, namespace: @namespace, subject: nil, version: nil, schema_id: nil, validate: false)
+      @logger.info("encode schema_name: #{schema_name} namespace: #{namespace} subject: #{subject}")
       schema, schema_id = if schema_id
         fetch_schema_by_id(schema_id)
       elsif subject && version
